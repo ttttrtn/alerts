@@ -1,58 +1,60 @@
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 from collections import deque
-import eventlet
-
-eventlet.monkey_patch()  # Needed for proper async with SocketIO
+import time
+import threading
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+app.config['SECRET_KEY'] = 'secret'
+
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 alert_queue = deque()
-is_displaying = False
+displaying = False
 
-@app.route('/')
+
+@app.route("/")
 def index():
-    return render_template('index.html')
+    return render_template("index.html")
 
-def send_next_alert():
-    global is_displaying
-    if alert_queue:
-        alert = alert_queue.popleft()
-        socketio.emit('show_alert', alert, broadcast=True)
-        is_displaying = True
-        # Wait 3 seconds then show the next alert
-        socketio.start_background_task(wait_and_show_next)
 
-    else:
-        is_displaying = False
+def alert_worker():
+    global displaying
 
-def wait_and_show_next():
-    eventlet.sleep(3)
-    send_next_alert()
+    while True:
+        if alert_queue:
+            displaying = True
+            alert = alert_queue.popleft()
 
-@socketio.on('alert')
+            socketio.emit("show_alert", alert)
+
+            time.sleep(3)
+        else:
+            displaying = False
+            time.sleep(0.5)
+
+
+@socketio.on("alert")
 def handle_alert(data):
-    """
-    Example data: {"Type":"Follow","Amount":null,"USERNAME":"Malik"}
-    """
     alert_type = data.get("Type", "Alert")
     username = data.get("USERNAME", "Someone")
-    amount = data.get("Amount", None)
+    amount = data.get("Amount")
 
     if alert_type.lower() == "follow":
         message = f"{username} just followed!"
     elif alert_type.lower() == "donation" and amount:
-        message = f"{username} just donated ${amount}!"
+        message = f"{username} donated ${amount}!"
     else:
         message = f"{username} triggered {alert_type}"
 
-    alert_queue.append({"message": message, "type": alert_type})
+    alert_queue.append({
+        "message": message,
+        "type": alert_type
+    })
 
-    # If nothing is displaying, start
-    if not is_displaying:
-        send_next_alert()
 
-if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000)
+threading.Thread(target=alert_worker, daemon=True).start()
+
+
+if __name__ == "__main__":
+    socketio.run(app, host="0.0.0.0", port=5000)
