@@ -10,30 +10,46 @@
     <div id="alert-container"></div>
 
     <script>
-        const socket = io();
+        let socket;
 
-        socket.on('show_alert', (data) => {
-            const container = document.getElementById('alert-container');
-            const div = document.createElement('div');
-            div.classList.add('alert');
+        function connectSocket() {
+            socket = io({
+                reconnectionAttempts: Infinity,
+                reconnectionDelay: 2000
+            });
 
-            // Different colors for different types
-            if(data.type.toLowerCase() === 'follow'){
-                div.style.backgroundColor = '#4caf50'; // green
-            } else if(data.type.toLowerCase() === 'donation'){
-                div.style.backgroundColor = '#ff9800'; // orange
-            } else {
-                div.style.backgroundColor = '#2196f3'; // blue
-            }
+            socket.on('connect', () => {
+                console.log('Connected to WebSocket');
+            });
 
-            div.innerText = data.message;
-            container.appendChild(div);
+            socket.on('disconnect', () => {
+                console.log('Disconnected. Trying to reconnect...');
+            });
 
-            // Fade out after 3 seconds
-            setTimeout(() => {
-                div.remove();
-            }, 3000);
-        });
+            socket.on('show_alert', (data) => {
+                const container = document.getElementById('alert-container');
+                const div = document.createElement('div');
+                div.classList.add('alert');
+
+                // Different colors for different types
+                if(data.type.toLowerCase() === 'follow'){
+                    div.style.backgroundColor = '#4caf50'; // green
+                } else if(data.type.toLowerCase() === 'donation'){
+                    div.style.backgroundColor = '#ff9800'; // orange
+                } else {
+                    div.style.backgroundColor = '#2196f3'; // blue
+                }
+
+                div.innerText = data.message;
+                container.appendChild(div);
+
+                setTimeout(() => {
+                    div.remove();
+                }, 3000);
+            });
+        }
+
+        connectSocket();
     </script>
 </body>
 </html>
