@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Alert Overlay</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <div id="alert-container"></div>
+
+    <script>
+        const socket = io();
+
+        socket.on('show_alert', (data) => {
+            const container = document.getElementById('alert-container');
+            const div = document.createElement('div');
+            div.classList.add('alert');
+
+            // Different colors for different types
+            if(data.type.toLowerCase() === 'follow'){
+                div.style.backgroundColor = '#4caf50'; // green
+            } else if(data.type.toLowerCase() === 'donation'){
+                div.style.backgroundColor = '#ff9800'; // orange
+            } else {
+                div.style.backgroundColor = '#2196f3'; // blue
+            }
+
+            div.innerText = data.message;
+            container.appendChild(div);
+
+            // Fade out after 3 seconds
+            setTimeout(() => {
+                div.remove();
+            }, 3000);
+        });
+    </script>
+</body>
+</html>
