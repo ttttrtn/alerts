@@ -38,11 +38,16 @@ def latest():
         return jsonify(alert_queue.popleft())
     return jsonify({"message": ""})
 
+from flask import request
+
 @app.route("/push", methods=["POST"])
 def push_alert():
     data = request.json
+    print("[PUSH RECEIVED]", data)  # 👈 IMPORTANT DEBUG
+
     if data and "message" in data:
         add_alert(data["message"], data.get("color", "white"))
+
     return {"status": "ok"}
 
 @app.route("/overlay.html")
