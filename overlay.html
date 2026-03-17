@@ -1,44 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Alerts Overlay</title>
+
+<style>
+body {
+    margin: 0;
+    background: transparent;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+}
+
+/* ALERT CONTAINER */
+#alert-container {
+    position: absolute;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-40px);
+    font-size: 42px;
+    font-weight: bold;
+    text-shadow: 2px 2px 12px #000;
+    opacity: 0;
+    transition: all 0.5s ease;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    pointer-events: none;
+}
+
+/* ICON */
+#alert-container img {
+    width: 80px;
+    height: 80px;
+}
+
+/* FADE IN */
+.show {
+    opacity: 1 !important;
+    transform: translateX(-50%) translateY(0px) !important;
+}
+
+/* FADE OUT */
+.hide {
+    opacity: 0 !important;
+    transform: translateX(-50%) translateY(-40px) !important;
+}
+</style>
+</head>
+
+<body>
+
+<div id="alert-container">
+    <img id="alert-gif" src="" style="display:none;">
+    <span id="alert-text"></span>
+</div>
+
+<audio id="alert-sound"></audio>
+
 <script>
 const ALERT_DURATION = 5000;
 
+const container = document.getElementById("alert-container");
+const text = document.getElementById("alert-text");
+const gif = document.getElementById("alert-gif");
+const sound = document.getElementById("alert-sound");
+
+// 🔥 REALTIME STREAM
 const evtSource = new EventSource("/stream");
 
-evtSource.onmessage = function(event) {
-    const data = JSON.parse(event.data);
+evtSource.onmessage = (event) => {
+    let data;
 
-    if(!data.message) return;
+    try {
+        data = JSON.parse(event.data);
+    } catch {
+        return;
+    }
 
-    const container = document.getElementById("alert-container");
-    const text = document.getElementById("alert-text");
-    const gif = document.getElementById("alert-gif");
-    const sound = document.getElementById("alert-sound");
+    if (!data.message) return;
+
+    showAlert(data);
+};
+
+// 🔥 ALERT FUNCTION
+function showAlert(data) {
+    const msg = data.message.toLowerCase();
 
     text.innerText = data.message;
     container.style.color = data.color || "white";
 
-    let msg = data.message.toLowerCase();
+    // RESET MEDIA
+    gif.style.display = "none";
+    gif.src = "";
+    sound.pause();
+    sound.currentTime = 0;
 
-    if(msg.includes("follow")) {
+    // TYPE DETECTION
+    if (msg.includes("follow")) {
         gif.src = "/static/follow.gif";
         sound.src = "/static/follow.mp3";
-    } else if(msg.includes("gift") || msg.includes("donate")) {
+    } else if (msg.includes("sub")) {
+        gif.src = "/static/sub.gif";
+        sound.src = "/static/sub.mp3";
+    } else if (msg.includes("gift") || msg.includes("donate")) {
         gif.src = "/static/donation.gif";
         sound.src = "/static/donation.mp3";
     }
 
-    gif.style.display = gif.src ? "block" : "none";
+    if (gif.src) gif.style.display = "block";
 
-    if(sound.src) {
-        sound.currentTime = 0;
-        sound.play().catch(()=>{});
+    // PLAY SOUND
+    if (sound.src) {
+        sound.play().catch(() => {});
     }
 
-    container.style.opacity = 1;
-    container.style.transform = "translateX(-50%) translateY(0px)";
+    // SHOW
+    container.classList.remove("hide");
+    container.classList.add("show");
 
+    // HIDE AFTER TIME
     setTimeout(() => {
-        container.style.opacity = 0;
-        container.style.transform = "translateX(-50%) translateY(-50px)";
+        container.classList.remove("show");
+        container.classList.add("hide");
     }, ALERT_DURATION);
-};
+}
 </script>
+
+</body>
+</html>
