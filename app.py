@@ -1,5 +1,7 @@
 import os
+import time
 import asyncio
+import threading
 import requests
 from collections import deque
 from flask import Flask, Response, request, send_from_directory
@@ -11,10 +13,11 @@ from TikTokLive.events import FollowEvent, GiftEvent
 
 # ================= CONFIG =================
 TIKTOK_USERNAME = "joe363653"
-POLL_INTERVAL = 6
 
 TIDYLABS_URL = "https://tidylabs.stream/alertv3.asp?key=PMESLFPWKKB2K19I6I9B1740869846&tips=1&follow=1&subs=1&hosts=1&interactive=1"
 NIMO_URL = "https://www.nimo.tv/vidwalla/alert-box?v=1&t=1773714076&id=1578570016&s=0243e7faef2e&_lang=1033"
+
+POLL_INTERVAL = 6
 
 MAX_QUEUE = 20
 MAX_SEEN = 100
@@ -24,10 +27,13 @@ alert_queue = deque(maxlen=MAX_QUEUE)
 
 seen_tidylabs = deque(maxlen=MAX_SEEN)
 seen_nimo = deque(maxlen=MAX_SEEN)
-seen_tiktok = deque(maxlen=MAX_SEEN)
 
 # ================= FLASK =================
 app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "OK"
 
 @app.route("/overlay.html")
 def overlay():
@@ -37,24 +43,26 @@ def overlay():
 def static_files(path):
     return send_from_directory("static", path)
 
-# 🔥 PUSH endpoint (for your local Rumble script)
+# 🔥 PUSH (for Rumble local script)
 @app.route("/push", methods=["POST"])
 def push_alert():
     data = request.json
+    print("[PUSH]", data)
+
     if data and "message" in data:
         add_alert(data["message"], data.get("color", "white"))
+
     return {"status": "ok"}
 
-# 🔥 REALTIME STREAM (NO POLLING)
+# 🔥 REALTIME STREAM (SSE)
 @app.route("/stream")
 def stream():
     def event_stream():
-        last_id = 0
         while True:
             if alert_queue:
                 alert = alert_queue.popleft()
                 yield f"data: {alert}\n\n"
-            asyncio.run(asyncio.sleep(0.5))
+            time.sleep(0.5)
 
     return Response(event_stream(), mimetype="text/event-stream")
 
@@ -64,7 +72,7 @@ def add_alert(msg, color="white"):
         "message": msg,
         "color": color
     })
-    print(f"[ALERT] {msg}")
+    print("[ALERT]", msg)
 
 # ================= TIDYLABS =================
 async def poll_tidylabs():
@@ -74,6 +82,7 @@ async def poll_tidylabs():
             tree = html.fromstring(r.text)
 
             text = tree.xpath('//*[@id="alerttext"]/text()')
+
             if text:
                 msg = text[0].strip()
                 if msg and msg not in seen_tidylabs:
@@ -93,6 +102,7 @@ async def poll_nimo():
             tree = html.fromstring(r.text)
 
             text = tree.xpath('/html/body/div[1]/div/text()')
+
             if text:
                 msg = text[0].strip()
                 if msg and msg not in seen_nimo:
@@ -114,18 +124,20 @@ class TikTokMonitor:
         self.client.on(GiftEvent)(self.on_gift)
 
     async def on_follow(self, event):
-        uid = f"{event.user.unique_id}"
+        uid = f"f:{event.user.unique_id}"
         if uid in self.seen:
             return
+
         self.seen.append(uid)
         add_alert(f"{event.user.unique_id} followed!", "#00ffea")
 
     async def on_gift(self, event):
-        uid = f"{event.user.unique_id}:{event.gift.gift_id}"
+        uid = f"g:{event.user.unique_id}:{event.gift.gift_id}"
         if uid in self.seen:
             return
+
         self.seen.append(uid)
-        add_alert(f"{event.user.unique_id} sent gift!", "#ffea00")
+        add_alert(f"{event.user.unique_id} sent a gift!", "#ffea00")
 
     async def run(self):
         while True:
@@ -137,8 +149,8 @@ class TikTokMonitor:
                 print("[TikTok ERROR]", e)
                 await asyncio.sleep(10)
 
-# ================= START =================
-async def main():
+# ================= ASYNC MAIN =================
+async def main_async():
     asyncio.create_task(poll_tidylabs())
     asyncio.create_task(poll_nimo())
 
@@ -148,14 +160,17 @@ async def main():
     while True:
         await asyncio.sleep(3600)
 
+# ================= START =================
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.create_task(main())
 
+    def start_async():
+        asyncio.run(main_async())  # ✅ FIXED LOOP
+
+    # run async system in background
+    threading.Thread(target=start_async, daemon=True).start()
+
+    # run flask
     port = int(os.environ.get("PORT", 5000))
-    print(f"🔥 Running optimized on {port}")
-
-    threading = __import__("threading")
-    threading.Thread(target=loop.run_forever, daemon=True).start()
+    print(f"🔥 Running on port {port}")
 
     app.run(host="0.0.0.0", port=port)
