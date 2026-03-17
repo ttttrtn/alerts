@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Alert Overlay</title>
+<title>Overlay Alerts</title>
 <style>
 body {
     margin: 0;
@@ -15,37 +15,87 @@ body {
     position: absolute;
     top: 50px;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translateX(-50%) translateY(-50px);
     font-size: 40px;
     font-weight: bold;
-    color: white;
     text-shadow: 2px 2px 10px #000;
     opacity: 0;
     transition: opacity 0.5s, transform 0.5s;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    pointer-events: none;
+}
+
+#alert-container img {
+    width: 80px;
+    height: 80px;
+}
+
+audio {
+    display: none;
 }
 </style>
 </head>
 <body>
-<div id="alert-container"></div>
+<div id="alert-container">
+    <img id="alert-gif" src="" alt="">
+    <span id="alert-text"></span>
+</div>
+
+<audio id="alert-sound"></audio>
 
 <script>
+const ALERT_DURATION = 5000; // 5000ms = 5 seconds
+
 async function poll() {
     try {
         const res = await fetch("/latest");
         const data = await res.json();
         if(data.message) {
             const container = document.getElementById("alert-container");
-            container.innerText = data.message;
+            const text = document.getElementById("alert-text");
+            const gif = document.getElementById("alert-gif");
+            const sound = document.getElementById("alert-sound");
+
+            text.innerText = data.message;
             container.style.color = data.color || "white";
+
+            // Determine alert type by keywords
+            let lowerMsg = data.message.toLowerCase();
+            if(lowerMsg.includes("follow")) {
+                gif.src = "/static/follow.gif";
+                sound.src = "/static/follow.mp3";
+            } else if(lowerMsg.includes("sub")) {
+                gif.src = "/static/sub.gif";
+                sound.src = "/static/sub.mp3";
+            } else if(lowerMsg.includes("donated") || lowerMsg.includes("gift")) {
+                gif.src = "/static/donation.gif";
+                sound.src = "/static/donation.mp3";
+            } else {
+                gif.src = "";
+                sound.src = "";
+            }
+
+            gif.style.display = gif.src ? "block" : "none";
+
+            if(sound.src) {
+                sound.currentTime = 0;
+                sound.play();
+            }
+
+            // Animate in
             container.style.opacity = 1;
             container.style.transform = "translateX(-50%) translateY(0px)";
+
+            // Hide after ALERT_DURATION
             setTimeout(() => {
                 container.style.opacity = 0;
-                container.style.transform = "translateX(-50%) translateY(-30px)";
-            }, 3000);
+                container.style.transform = "translateX(-50%) translateY(-50px)";
+            }, ALERT_DURATION);
         }
     } catch(e) {
-        console.error(e);
+        console.error("[Overlay ERROR]", e);
     }
     setTimeout(poll, 500);
 }
