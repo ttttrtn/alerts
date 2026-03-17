@@ -24,7 +24,48 @@ body {
     display: flex;
     align-items: center;
     gap: 15px;
+    pointer-events: none;<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Overlay Alerts</title>
+
+<style>
+body {
+    margin: 0;
+    background: transparent;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+}
+
+/* 🔥 CHAT EMBED (TOP LEFT) */
+#chat-frame {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 350px;
+    height: 600px;
+    border: none;
+    background: transparent;
+    z-index: 1;
+}
+
+/* 🔥 ALERT */
+#alert-container {
+    position: absolute;
+    top: 50px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-50px);
+    font-size: 40px;
+    font-weight: bold;
+    text-shadow: 2px 2px 10px #000;
+    opacity: 0;
+    transition: opacity 0.5s, transform 0.5s;
+    display: flex;
+    align-items: center;
+    gap: 15px;
     pointer-events: none;
+    z-index: 2;
 }
 
 #alert-container img {
@@ -37,7 +78,13 @@ audio {
 }
 </style>
 </head>
+
 <body>
+
+<!-- 🔥 CHAT OVERLAY -->
+<iframe id="chat-frame" src="https://chat-2-12af.onrender.com"></iframe>
+
+<!-- 🔥 ALERT -->
 <div id="alert-container">
     <img id="alert-gif" src="" alt="">
     <span id="alert-text"></span>
@@ -46,12 +93,13 @@ audio {
 <audio id="alert-sound"></audio>
 
 <script>
-const ALERT_DURATION = 5000; // 5000ms = 5 seconds
+const ALERT_DURATION = 5000;
 
 async function poll() {
     try {
         const res = await fetch("/latest");
         const data = await res.json();
+
         if(data.message) {
             const container = document.getElementById("alert-container");
             const text = document.getElementById("alert-text");
@@ -61,8 +109,8 @@ async function poll() {
             text.innerText = data.message;
             container.style.color = data.color || "white";
 
-            // Determine alert type by keywords
             let lowerMsg = data.message.toLowerCase();
+
             if(lowerMsg.includes("follow")) {
                 gif.src = "/static/follow.gif";
                 sound.src = "/static/follow.mp3";
@@ -81,26 +129,28 @@ async function poll() {
 
             if(sound.src) {
                 sound.currentTime = 0;
-                sound.play();
+                sound.play().catch(()=>{});
             }
 
             // Animate in
             container.style.opacity = 1;
             container.style.transform = "translateX(-50%) translateY(0px)";
 
-            // Hide after ALERT_DURATION
             setTimeout(() => {
                 container.style.opacity = 0;
                 container.style.transform = "translateX(-50%) translateY(-50px)";
             }, ALERT_DURATION);
         }
+
     } catch(e) {
         console.error("[Overlay ERROR]", e);
     }
+
     setTimeout(poll, 500);
 }
 
 poll();
 </script>
+
 </body>
 </html>
