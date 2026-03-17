@@ -1,4 +1,4 @@
-Flask==2.3.4
-requests==2.31.0
-lxml==4.9.3
-TikTokLive==1.4.0
+Flask>=2.3.0,<3
+requests>=2.30
+lxml>=4.9
+TikTokLive>=0.13.0
