@@ -36,8 +36,15 @@ app = Flask(__name__)
 def latest():
     if alert_queue:
         return jsonify(alert_queue.popleft())
-    return jsonify({"message": ""})
-
+    return jsonify({"message": ""}) 
+    
+@app.route("/push", methods=["POST"])
+def push_alert():
+    data = request.json
+    if data and "message" in data:
+        add_alert(data["message"], data.get("color", "white"))
+    return {"status": "ok"}
+    
 @app.route("/overlay.html")
 def overlay_html():
     return send_from_directory(".", "overlay.html")
