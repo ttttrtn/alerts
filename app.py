@@ -1,56 +1,48 @@
-from flask import Flask, render_template
-from flask_socketio import SocketIO, emit
+from flask import Flask, render_template, request, jsonify
+from flask_socketio import SocketIO
 from collections import deque
-import time
 import threading
+import time
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret'
-
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
-alert_queue = deque()
-displaying = False
-
+alerts = deque()
 
 @app.route("/")
 def index():
     return render_template("index.html")
 
 
-def alert_worker():
-    global displaying
-
-    while True:
-        if alert_queue:
-            displaying = True
-            alert = alert_queue.popleft()
-
-            socketio.emit("show_alert", alert)
-
-            time.sleep(3)
-        else:
-            displaying = False
-            time.sleep(0.5)
-
-
-@socketio.on("alert")
-def handle_alert(data):
-    alert_type = data.get("Type", "Alert")
-    username = data.get("USERNAME", "Someone")
-    amount = data.get("Amount")
+@app.route("/alert")
+def send_alert():
+    alert_type = request.args.get("type", "alert")
+    user = request.args.get("user", "Someone")
+    amount = request.args.get("amount")
 
     if alert_type.lower() == "follow":
-        message = f"{username} just followed!"
+        msg = f"{user} just followed!"
     elif alert_type.lower() == "donation" and amount:
-        message = f"{username} donated ${amount}!"
+        msg = f"{user} donated ${amount}!"
     else:
-        message = f"{username} triggered {alert_type}"
+        msg = f"{user} triggered {alert_type}"
 
-    alert_queue.append({
-        "message": message,
+    alerts.append({
+        "message": msg,
         "type": alert_type
     })
+
+    return jsonify({"status": "sent", "message": msg})
+
+
+def alert_worker():
+    while True:
+        if alerts:
+            alert = alerts.popleft()
+            socketio.emit("show_alert", alert)
+            time.sleep(3)
+        else:
+            time.sleep(1)
 
 
 threading.Thread(target=alert_worker, daemon=True).start()
