@@ -55,13 +55,15 @@ def push_alert():
     return {"status": "ok"}
 
 # 🔥 REALTIME STREAM (SSE)
+import json
+
 @app.route("/stream")
 def stream():
     def event_stream():
         while True:
             if alert_queue:
                 alert = alert_queue.popleft()
-                yield f"data: {alert}\n\n"
+                yield f"data: {json.dumps(alert)}\n\n"  # ✅ FIXED
             time.sleep(0.5)
 
     return Response(event_stream(), mimetype="text/event-stream")
