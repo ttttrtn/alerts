@@ -4,24 +4,22 @@
 <meta charset="UTF-8">
 <title>Mobile Transparent Combined Overlay</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
 html, body {
   margin: 0;
   padding: 0;
   width: 100%;
-  height: 100%;
+  height: 100dvh;
   background: transparent;
   overflow: hidden;
   font-family: Arial, sans-serif;
 }
 
-/* STREAMELEMENTS OVERLAYS */
+/* OVERLAYS */
 .overlay-container {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
 }
 
 .overlay-container iframe {
@@ -31,7 +29,7 @@ html, body {
   border: none;
   background: transparent;
   pointer-events: none;
-  object-fit: contain; /* prevents clipping */
+  object-fit: contain;
 }
 
 #overlay1 { z-index: 1; }
@@ -44,7 +42,7 @@ html, body {
   top: 5%;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 28px;
+  font-size: clamp(16px, 4vw, 28px);
   font-weight: bold;
   text-shadow: 2px 2px 12px #000;
   opacity: 0;
@@ -56,11 +54,12 @@ html, body {
   z-index: 9998;
   width: 90%;
   text-align: center;
+  justify-content: center;
 }
 
 #alert-container img {
-  width: 50px;
-  height: 50px;
+  width: clamp(30px, 6vw, 50px);
+  height: clamp(30px, 6vw, 50px);
 }
 
 .show {
@@ -73,27 +72,38 @@ html, body {
   transform: translateX(-50%) translateY(-40px) !important;
 }
 
-/* SOCIAL STREAM NINJA DOCK */
+/* 🔥 SSN DOCK (TOP LEFT + RESPONSIVE) */
 #ssn-dock {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 120px;
-  height: 150px;
+  position: fixed;
+  top: env(safe-area-inset-top, 10px);
+  left: env(safe-area-inset-left, 10px);
+
+  width: clamp(110px, 22vw, 180px);
+  height: clamp(140px, 28vh, 220px);
+
   border: none;
   background: transparent;
   z-index: 9999;
   pointer-events: auto;
 }
+
+/* Optional: scale down for very small screens */
+@media (max-width: 400px) {
+  #ssn-dock {
+    width: 100px;
+    height: 130px;
+  }
+}
 </style>
 </head>
+
 <body>
 
-<!-- STREAMELEMENTS OVERLAYS -->
+<!-- OVERLAYS -->
 <div class="overlay-container">
-  <iframe id="overlay1" src="https://streamelements.com/overlay/686232c233ab63d506f91b19/Ym8L0KU1TcSCBxUzyVUZ9gir3OSOcEuDsSm2zfXK2rh7SfUV" allowtransparency="true"></iframe>
-  <iframe id="overlay2" src="https://streamelements.com/overlay/69b9e278a4697ca2e0a315c7/tdo8ja1UfrzRL_nQsipY8eoDRlTHGqxuuP77ulwg18uLrKt_" allowtransparency="true"></iframe>
-  <iframe id="overlay3" src="https://streamelements.com/overlay/6862341c9e6035d94bc01376/Vw55jQwWH0pCYMhpTtwjuozcBDL9ERoUwobSKnEcZHrs3wDT" allowtransparency="true"></iframe>
+  <iframe id="overlay1" src="https://streamelements.com/overlay/686232c233ab63d506f91b19/Ym8L0KU1TcSCBxUzyVUZ9gir3OSOcEuDsSm2zfXK2rh7SfUV"></iframe>
+  <iframe id="overlay2" src="https://streamelements.com/overlay/69b9e278a4697ca2e0a315c7/tdo8ja1UfrzRL_nQsipY8eoDRlTHGqxuuP77ulwg18uLrKt_"></iframe>
+  <iframe id="overlay3" src="https://streamelements.com/overlay/6862341c9e6035d94bc01376/Vw55jQwWH0pCYMhpTtwjuozcBDL9ERoUwobSKnEcZHrs3wDT"></iframe>
 </div>
 
 <!-- ALERTS -->
@@ -103,12 +113,11 @@ html, body {
 </div>
 <audio id="alert-sound"></audio>
 
-<!-- SOCIAL STREAM NINJA DOCK -->
+<!-- 🔥 SSN DOCK -->
 <iframe 
-  id="ssn-dock" 
-  src="https://socialstream.ninja/dock.html?session=cxbfKsNRwF&password=false&savesingle&noavatar&transparent&chatonly&hidemenu"
-  allowtransparency="true"
-></iframe>
+  id="ssn-dock"
+  src="https://socialstream.ninja/dock.html?session=cxbfKsNRwF&password=false&savesingle&noavatar&transparent&chatonly&hidemenu">
+</iframe>
 
 <script>
 const ALERT_DURATION = 4000;
@@ -118,7 +127,6 @@ const text = document.getElementById("alert-text");
 const gif = document.getElementById("alert-gif");
 const sound = document.getElementById("alert-sound");
 
-// Example: EventSource for real-time alerts
 const evtSource = new EventSource("/stream");
 
 evtSource.onmessage = (event) => {
@@ -159,6 +167,11 @@ function showAlert(data) {
         container.classList.remove("show");
         container.classList.add("hide");
     }, ALERT_DURATION);
+}
+</script>
+
+</body>
+</html>
 }
 </script>
 
